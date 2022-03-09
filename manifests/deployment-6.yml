@@ -1,0 +1,19 @@
+apiVersion : apps/v1
+kind: Deployment
+metadata:
+  name: "aksakslabselcuk-a312"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: "aksakslabselcuk-a312"
+  template:
+    metadata:
+      labels:
+        app: "aksakslabselcuk-a312"
+    spec:
+      containers:
+        - name: "aksakslabselcuk-a312"
+          image: "acrakslabselcuk.azurecr.io/aksakslabselcuk"
+          ports:
+          - containerPort: 80
