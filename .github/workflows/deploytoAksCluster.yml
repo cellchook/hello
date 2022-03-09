@@ -1,0 +1,50 @@
+on: [push]
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    
+    - uses: azure/docker-login@v1
+      with:
+        login-server: acrakslabselcuk.azurecr.io
+        username: ${{ secrets.acr_acrakslabselcuk_username }}
+        password: ${{ secrets.acr_acrakslabselcuk_password }}
+    
+    - name: Build and push image to ACR
+      id: build-image
+      run: |
+        docker build "$GITHUB_WORKSPACE/" -f  "Dockerfile" -t acrakslabselcuk.azurecr.io/aksakslabselcuk:${{ github.sha }} --label dockerfile-path=Dockerfile
+        docker push acrakslabselcuk.azurecr.io/aksakslabselcuk:${{ github.sha }}
+    
+    - uses: azure/k8s-set-context@v1
+      with:
+         kubeconfig: ${{ secrets.aks_aksakslabselcuk_kubeConfig }}
+      id: login
+    
+    - name: Create namespace
+      run: |
+        namespacePresent=`kubectl get namespace | grep aks-akslab-selcukafe6 | wc -l`
+        if [ $namespacePresent -eq 0 ]
+        then
+            echo `kubectl create namespace aks-akslab-selcukafe6`
+        fi
+
+    - uses: azure/k8s-create-secret@v1
+      with:
+        namespace: aks-akslab-selcukafe6
+        container-registry-url: acrakslabselcuk.azurecr.io
+        container-registry-username: ${{ secrets.acr_acrakslabselcuk_username }}
+        container-registry-password: ${{ secrets.acr_acrakslabselcuk_password }}
+        secret-name: aksakslabseldockerauth
+       
+    - uses: azure/k8s-deploy@v1.2
+      with:
+        namespace: aks-akslab-selcukafe6
+        manifests: |
+          manifests/deployment-6.yml
+          manifests/service-6.yml
+        images: |
+          acrakslabselcuk.azurecr.io/aksakslabselcuk:${{ github.sha }}
+        imagepullsecrets: |
+          aksakslabseldockerauth
